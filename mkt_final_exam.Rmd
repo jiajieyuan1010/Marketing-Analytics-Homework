@@ -1,0 +1,349 @@
+---
+title: "mkt_final_exam"
+author: "Jiajie Yuan"
+date: "12/22/2019"
+output: word_document
+---
+#Basic Explanatory Analysis
+#1
+```{r}
+rm(list =ls())
+gc()
+#setwd("/Users/jiaji/Documents/marketing")
+dta_bank=read.csv("C:/Users/jiaji/Desktop/Bank Case.csv")
+```
+#2.a
+```{r}
+summary(dta_bank)
+str（dta_bank)
+```
+#2.b
+```{r}
+#calculate the number of outliers in the variable age,we define outliers as any observation with a value is more(less) than 4 times its mean
+length(dta_bank$age[dta_bank$age>(4*sd(dta_bank$age)+mean(dta_bank$age))|dta_bank$age<(mean(dta_bank$age)-4*sd(dta_bank$age))])
+#remove outliers
+dta_bank=dta_bank[dta_bank$age<=(4*sd(dta_bank$age)+mean(dta_bank$age))&dta_bank$age>=(mean(dta_bank$age)-4*sd(dta_bank$age)),]
+```
+```{r}
+#calculate the number of outliers in the variable duration,we define outliers as any observation with a value is more(less) than 4 times its mean
+length(dta_bank$age[dta_bank$duration>(4*sd(dta_bank$duration)+mean(dta_bank$duration))|dta_bank$duration<(mean(dta_bank$duration)-4*sd(dta_bank$duration))])
+#remove outliers
+dta_bank=dta_bank[dta_bank$duration<=(4*sd(dta_bank$duration)+mean(dta_bank$duration))&dta_bank$duration>=(mean(dta_bank$duration)-4*sd(dta_bank$duration)),]
+```
+#3
+```{r}
+library(corrplot)
+#change category variables into numeric variables
+for(i in 2:10){
+  dta_bank[,i]=as.numeric(as.factor(dta_bank[,i]))
+}
+dta_bank$y = factor(dta_bank$y, levels = c('no', 'yes'), labels = c(0,1))
+dta_bank$y = as.numeric(dta_bank$y)
+#create a corr-plot
+corr=cor(dta_bank)
+corrplot(corr, method = "color")
+```
+#4
+```{r}
+#Run the following command lm(y~.,data=dta_bank)
+library(lmtest)
+library(zoo)
+library(sandwich)
+dta_bank=read.csv("C:/Users/jiaji/Desktop/Bank Case.csv")
+dta_bank$y = ifelse(dta_bank$y =='yes',1,0)
+#dta_bank$y = as.numeric(dta_bank$y)
+#remove outliers
+dta_bank=dta_bank[dta_bank$age<=(4*sd(dta_bank$age)+mean(dta_bank$age))&dta_bank$age>=(mean(dta_bank$age)-4*sd(dta_bank$age)),]
+dta_bank=dta_bank[dta_bank$duration<=(4*sd(dta_bank$duration)+mean(dta_bank$duration))&dta_bank$duration>=(mean(dta_bank$duration)-4*sd(dta_bank$duration)),]
+fit=lm(y~.,data=dta_bank)
+summary(fit)
+coeftest(fit, vcov = vcovHC(fit, type = "HC1"))
+```
+#a.Write the structural equation that R is estimating?
+
+y=8.3534e-03+7.1045e-04*age-2.6904e-02*jobblue-collar-2.7058e-02*jobentrepreneur+...
+
+#b.Comment the results.
+
+i.Best time to perform telemarketing tasks?
+
+From the summary of the regression,we can notice that the coefficient for monthmar is the biggest one comparing with other months.
+This means that the best month to perform telemarking tasks is on March.In the meanwhile, we notice that the coefficient for day_of_weekwed
+is biggest one comparing with other days of week.Thus,the best day of week to perform telemarking tasks is Wednesday.Combining month and day of week, I draw the conclusion that the best time to perform telemarking tasks is March's Wednesday.
+
+ii.Best income groups?
+
+From the summmary of the regression,we can notice that the coefficient for jobstudent is the biggest one comparing with other jobs, therefore we can make the conclusion that the best income groups for telemarketing tasks are students.
+
+iii.Potential concerns of omitted variable Bias
+Arises of an omitted variable both it is determinant of y and it is correlated with one included in the regressor.Focus on this regression, I think gender is an omitted variable because gender is a determinant of y and it is also correlated with job.
+If omitted variable bias exists,the result of the regression would be biased.
+
+#Predictive Modeling and Tuning
+1.Explain (in sentences) why and how we always do that.
+
+Use the train set for initial training of multiple models to get a set of models and the optimal parameters on the training set. Then use these models to verify in the validate set. Adjust the model parameters and complexity while verifying to find the optimal model and
+Corresponding optimal parameters, and then use the test set for model evaluation to estimate the generalization ability of the model.
+
+2.From the point of view of the firm and given that we are running a predictive exercise,is there any variable that should not be included as X? If yes, please drop it.
+
+There is no missing value in this dataset. Nevertheless, there are values like “unknown”, which are helpless just like missing values. Thus, these ambiguous values are removed from the dataset.
+In order to capture the general trend in the dataset, outliers in the column “age” and "duration" are dropped. Outliers are defined as the values which are more than its four standard deviations. 
+```{r}
+#remove "unknown"
+dta_bank=dta_bank[dta_bank$job!="unknown",]
+dta_bank=dta_bank[dta_bank$marital!="unknown",]
+dta_bank=dta_bank[dta_bank$education!="unknown",]
+dta_bank=dta_bank[dta_bank$default!="unknown",]
+dta_bank=dta_bank[dta_bank$housing!="unknown",]
+#remove outliers(we have already removed outliers before)
+#dta_bank=dta_bank[dta_bank$duration<=(4*sd(dta_bank$duration)+mean(dta_bank$duration))&dta_bank$duration>=(mean(dta_bank$duration)-4*sd(dta_bank$duration)),]
+#dta_bank=dta_bank[dta_bank$duration<=(4*sd(dta_bank$duration)+mean(dta_bank$duration))&dta_bank$duration>=(mean(dta_bank$duration)-4*sd(dta_bank$duration)),]
+
+```
+3.Explain the problems of overfitting and underfitting.
+
+In my opinion,underfitting means that the model cannot learn enough information from the train data set.The deep reason is that the internal relationship inside training data are not enough,which also means that the information training data provides are not enough.Another reason is that the choices of model selection are not suitable.The model and the dataset are not compatible. 
+
+Overfitting always occurs on testing data.It means that the model perform very well on training data,while it perform worst on testing data.Basically, if the model complexity increases, the pobability of overfitting increases.
+
+4.Explain the meaning of the no free lunch theorem.
+
+I understand this theorem from two aspects:
+1. While one algorithm (algorithm A) performs better than another algorithm (algorithm B) on a particular data set, it must accompany that algorithm A performs worse than algorithm B on another particular data set;
+2. Specific problems (problems in the field of machine learning) needs specific analysis (specific machine learning algorithm selection).
+
+5.For the following 4 models, write their structural equations and comment:
+lm1 = lm(y~age+factor(month),            data=????)
+lm2 = lm(y~age+age^2+age^3+factor(month),data=????)
+lm3 = lm(y~.,                            data=????)
+lm4 = lm(y~.^2,                          data=????)
+```{r}
+library(tidyverse)
+#add age2 as age^2,age3 as age^3
+dta_bank     =dta_bank%>%mutate(age2=age^2,age3=age^3)
+inx_train    = caret::createDataPartition(dta_bank$y, p=0.7)$Resample1 
+inx_valid    = NULL
+inx_test     = (1:nrow(dta_bank))[! (1:nrow(dta_bank) %in% inx_train)]
+
+dta_train    = dta_bank[ inx_train, ]
+dta_valid    = dta_bank[ inx_valid, ]
+dta_test     = dta_bank[-inx_train, ]
+
+lm1 = lm(y~age+factor(month),data=dta_train)
+lm2 = lm(y~age+age2+age3+factor(month),data=dta_train)
+#drop age2 and age3
+dta_bank=dta_bank[,-(13:14)]
+inx_train    = caret::createDataPartition(dta_bank$y, p=0.7)$Resample1 
+inx_valid    = NULL
+inx_test     = (1:nrow(dta_bank))[! (1:nrow(dta_bank) %in% inx_train)]
+
+dta_train    = dta_bank[ inx_train, ]
+dta_valid    = dta_bank[ inx_valid, ]
+dta_test     = dta_bank[-inx_train, ]
+lm3 = lm(y~.,data=dta_train)
+lm4 = lm(y~.^2,data=dta_train)
+summary(lm1)
+summary(lm2)
+summary(lm3)
+summary(lm4)
+coeftest(lm1, vcov = vcovHC(lm1, type = "HC1"))
+coeftest(lm2, vcov = vcovHC(lm1, type = "HC1"))
+coeftest(lm3, vcov = vcovHC(lm1, type = "HC1"))
+coeftest(lm4, vcov = vcovHC(lm1, type = "HC1"))
+```
+5.For the following 4 models, write their structural equations and comment:
+
+lm1:y=0.2023869+0.0004824*age-0.1130750*factor(month)aug+0.2216488*factor(month)dec +...
+lm2:y=7.932e-01-3.254e-02*age+5.103e-04*age^2-1.870e-06*age^3-1.076e-01*factor(month)aug+...
+lm3:y=2.301e-02+7.392e-04*age -3.557e-02*jobblue-collar+...
+lm4:y=-2.760e-01+7.194e-04*age+1.086e-01*jobblue-collar+...-9.629e-04*age*jobblue-collar+...+3.264e-04*jobself-employed*monthaug                      
+```{r}
+accuracy=function(model){
+  predict = predict(model, dta_test)
+  pred <- ifelse(predict>0.5, 1, 0)
+  test_labels=dta_test[,"y"]
+  t <- table(test_labels, pred)
+  accuracy = sum(diag(t)) / sum(t)
+  print(paste("accuracy:",accuracy))
+}
+```
+```{r}
+print("lm1")
+accuracy(model = lm1)
+print("lm3")
+accuracy(model = lm3)
+print("lm4")
+accuracy(model = lm4)
+dta_test=dta_test%>%mutate(age2=age^2,age3=age^3)
+print("lm2")
+accuracy(model = lm2)
+```
+a.Which one overfits more?
+lm4 overfits more because the Residual standard error of lm4 is the least one while the accuracy of it is not the highest one.Besides, the complexity of lm4 is the highest one.
+
+b.Which one underfits more?
+lm1 and lm2 underfit more, because the Residual standard error are bigger than the left ones.
+
+c.Is the model that fits the training data the best one that has the best predictive power?
+No.Lm4 fits the training data best, while it doesn't have the best predictive power.
+
+d.Can we use a confusion matrix to analyze the problems a problem of underfitting? 
+A confusion matrix is a table that is often used to describe the performance of a classification model (or “classifier”) on a set of test data for which the true values are known.Underfitting is a problem that the model perform worst on train data,therefore, it is not a good way to use a confusion matrix to analyze underfitting.
+
+e.Which data set should we use to run these regressions?
+The train set for lm3,which has good perform on test and train data comparing other models.
+
+#Improving the predictive power
+1.Make a visualization to inspect the relationship between the Y and each of the X that you have included in the regressions above.
+```{r}
+library(ggplot2)
+#plots for lm1
+predict = predict(lm1, dta_test)
+ggplot(dta_test,aes(age,predict))+geom_point()
+ggplot(dta_test,aes(factor(month),predict))+geom_point()
+```
+```{r}
+#plots for lm2
+predict = predict(lm2, dta_test)
+ggplot(dta_test,aes(age,predict))+geom_point()
+ggplot(dta_test,aes(age2,predict))+geom_point()
+ggplot(dta_test,aes(age3,predict))+geom_point()
+ggplot(dta_test,aes(factor(month),predict))+geom_point()
+```
+```{r}
+#plots for lm3
+dta_test=dta_test[,-(13:14)]
+predict = predict(lm3, dta_test)
+for(i in 1:dim(dta_test)[2]){
+  plot(dta_test[[i]],predict,xlab=colnames(dta_test)[i],ylab = "predict")
+}
+```
+```{r}
+#plots for lm4
+predict = predict(lm4, dta_test)
+for(i in 1:dim(dta_test)[2]){
+  plot(dta_test[[i]],predict,xlab=colnames(dta_test)[i],ylab = "predict")
+}
+```
+2.Use the other predictive methods seen in class(like NB classifiers or KNN) to check if you can improve the performance.
+```{r}
+library(e1071)
+library(naivebayes)
+library(data.table)
+#use NB
+dta_bank=read.csv("C:/Users/jiaji/Desktop/Bank Case.csv")
+#dta_bank$y = ifelse(dta_bank$y =='yes',1,0)
+dta_bank$y=factor(dta_bank$y)
+#remove "unknown"
+dta_bank=dta_bank[dta_bank$job!="unknown",]
+dta_bank=dta_bank[dta_bank$marital!="unknown",]
+dta_bank=dta_bank[dta_bank$education!="unknown",]
+dta_bank=dta_bank[dta_bank$default!="unknown",]
+dta_bank=dta_bank[dta_bank$housing!="unknown",]
+#remove outliers
+dta_bank=dta_bank[dta_bank$age<=(4*sd(dta_bank$age)+mean(dta_bank$age))&dta_bank$age>=(mean(dta_bank$age)-4*sd(dta_bank$age)),]
+dta_bank=dta_bank[dta_bank$duration<=(4*sd(dta_bank$duration)+mean(dta_bank$duration))&dta_bank$duration>=(mean(dta_bank$duration)-4*sd(dta_bank$duration)),]
+inx_train    = caret::createDataPartition(dta_bank$y, p=0.8)$Resample1 
+inx_valid    = NULL
+inx_test     = (1:nrow(dta_bank))[! (1:nrow(dta_bank) %in% inx_train)]
+dta_train    = dta_bank[ inx_train, ]
+dta_valid    = dta_bank[ inx_valid, ]
+dta_test     = dta_bank[-inx_train, ]
+
+# Training a model on the data
+NBclassifier=naive_bayes(formula = y ~ .,
+                         data = dta_train)
+pred_data=predict(NBclassifier,newdata = dta_test)
+
+# Evaluating model performance using a confusion matrix
+test_data = dta_test[,"y"]
+fitted_data = as.data.table(cbind(test_data = as.character(dta_test[,"y"]), 
+                                  pred_data = as.character(predict(NBclassifier,newdata = dta_test))))
+fitted_data$is_equal = fitted_data$test_data==fitted_data$pred_data
+confuss_mat          = fitted_data[,
+                                   {
+                                     tmp1=sum(is_equal);
+                                     tmp2=sum(!is_equal);
+                                     list(corrects=tmp1,wrongs = tmp2)
+                                   },keyby=.(test_data,pred_data)]
+confuss_mat
+```
+```{r}
+library("nnet")
+#use knn
+dta_bank=read.csv("C:/Users/jiaji/Desktop/Bank Case.csv")
+dta_bank$y = ifelse(dta_bank$y =='yes',1,0)
+dta_bank$y=as.factor(dta_bank$y)
+#remove "unknown"
+dta_bank=dta_bank[dta_bank$job!="unknown",]
+dta_bank=dta_bank[dta_bank$marital!="unknown",]
+dta_bank=dta_bank[dta_bank$education!="unknown",]
+dta_bank=dta_bank[dta_bank$default!="unknown",]
+dta_bank=dta_bank[dta_bank$housing!="unknown",]
+#remove outliers
+dta_bank=dta_bank[dta_bank$age<=4*sd(dta_bank$age),]
+dta_bank=dta_bank[dta_bank$duration<=4*sd(dta_bank$duration),]
+#remove duration
+dta_bank=dta_bank[,-2]
+dta_bank$age=scale(dta_bank$age)
+#There are many category variables in the dataset, we need to change them into numeric variables
+myfunction=function(variable){
+  dummy=class.ind(variable)
+  dta_bank=cbind(dta_bank,dummy)
+  return(dta_bank)
+}
+for (i in 2:10) {
+  dta_bank=myfunction(variable=dta_bank[,i])
+}
+
+xx  = c("unknown")
+dta_bank = dta_bank[,!names(dta_bank) %in% xx]
+dta_bank =dta_bank[,-(2:10)]
+
+#dta_bank_n = as.data.frame(lapply(dta_bank[,1:2], scale))
+
+# create training and test data
+dta_train = dta_bank[1:11772,]
+dta_test = dta_bank[11773:15698,]
+dta_valid =dta_bank[15699:19624,]
+#dta_train_n = dta_bank_n[1:11772,]
+#dta_test_n = dta_bank_n[11773:15698,]
+#dta_valid_n =dta_bank_n[15699:19624,]
+
+# create labels for training and test data
+dta_train_labels = dta_train[, "y"]
+dta_test_labels  = dta_test[ , "y"]
+dta_valid_labels = dta_valid[, "y"]
+
+# Training model on train_data
+dta_test_pred = class::knn(train = dta_train, 
+                             cl    = dta_train_labels,
+                             test  = dta_test,
+                             k     = 10
+                            
+                            
+                            )
+
+(t <- table(dta_test_labels, dta_test_pred))
+(accuracy = sum(diag(t)) / sum(t))
+
+```
+3.Do they make it better? Worse?
+Better than Lm1 and lm2 and are not very different in accuracy with lm3 and lm4
+
+#Causal Questions
+1.a
+
+Because in marketing, we need to think about the real situation.We use any machine learning tools to make a predictive analysis should be interpreted together with fact situation. The relationship between variables are causal relationships.We cannot just make conclusion based on 
+a predictive analysis.In the fact, the relathionship betwween variables in real world are more complex.Thus,in marketing is preferable a causal analysis to a predictive analysis.
+
+1.b
+In statistics, the bias (or bias function) of an estimator is the difference between this estimator's expected value and the true value of the parameter being estimated. An estimator or decision rule with zero bias is called unbiased. 
+
+2.
+Month and dayofweek should not be ingore because from a causal point of view, banks can based on these two variables to decide which time would be the best time to make telemarketing.These two variables are the most direct variables focus on the outcomes of the prediction.
+
+3.
+Arises of an omitted variable both it is determinant of y and it is correlated with one included in the regressor.Focus on this regression, I think gender is an omitted variable because gender is a determinant of y and it is also correlated with job,matrial and education.
+If omitted variable bias exists,the result of the regression would be biased.
