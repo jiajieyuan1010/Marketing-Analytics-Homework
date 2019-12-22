@@ -1,0 +1,180 @@
+---
+title: "homework4"
+---
+#problem 1
+```{r}
+rm(list=ls()); gc()
+```
+#1.1
+```{r}
+Is_leap_Year=function(year){
+       if(year<1950|year>2050){
+             print("the range of input should between 1950 and 2050")
+         }
+      else if((year%%4==0&year%%100!=0)|(year%%400==0)){
+        print(TRUE)}
+      else{
+        print(FALSE)
+      }}
+Is_leap_Year(2019)
+```
+#1.2
+```{r}
+second_Saturday=function(year){
+  for(i in 1:12){
+    date_begin=as.Date(paste(year,i,01,sep="-"))
+    date_end=as.Date(paste(year,i,28,sep="-"))
+    date_of_this_month=seq.Date(from=date_begin,to=date_end,by="day")
+    result=(date_of_this_month[(weekdays(date_of_this_month)=="Tuesday")==TRUE][2])
+    print(result)
+  }
+}
+second_Saturday(2019)
+```
+#1.3
+```{r}
+day_Of_the_Week_in_N_days=function(date,N){
+  if((N>20000)==TRUE|(N<-20000)==TRUE){
+    print("N should between -20000 and 20000")
+  }
+  else if(N%%1!=0){
+    print("N should be integer")
+  }
+  else{
+  new_date=as.Date(date)+N+1
+  s= weekdays(as.Date(new_date))
+  return(s)}
+}
+solution = day_Of_the_Week_in_N_days (date = '2019-09-22',N=2);
+print(solution)
+```
+#problem 2
+```{r}
+library(data.table)
+library(tidyverse)
+#2.1.a
+flights1 <- read.csv("C:/Users/jiaji/Desktop/flights.csv")
+#2.1.b
+library("data.table")
+flights2=fread("C:/Users/jiaji/Desktop/flights.csv")
+system.time(flights1 <- read.csv("C:/Users/jiaji/Desktop/flights.csv"))
+system.time(flights2<-fread("C:/Users/jiaji/Desktop/flights.csv"))
+```
+#2.2
+```{r}
+flights1[order(flights1$AIRLINE,flights1$FLIGHT_NUMBER,flights1$YEAR,flights1$MONTH,flights1$DAY),]
+system.time(flights1[order(flights1$AIRLINE,flights1$FLIGHT_NUMBER,flights1$YEAR,flights1$MONTH,flights1$DAY),])
+```
+```{r}
+flights2[order(flights2$AIRLINE,flights2$FLIGHT_NUMBER,flights2$YEAR,flights2$MONTH,flights2$DAY),]
+system.time(flights2[order(flights2$AIRLINE,flights2$FLIGHT_NUMBER,flights2$YEAR,flights2$MONTH,flights2$DAY),])
+```
+Because my pc runs so slowly when I use read.csv() to load flights data, I decide all use fread() to answer the following question
+#2.3.a
+```{r}
+flights=fread("C:/Users/jiaji/Desktop/flights.csv")
+flights_conditional_on_airline_time=flights%>%group_by(AIRLINE,DEPARTURE_TIME)%>%count(AIRLINE,DEPARTURE_TIME)
+view(flights_conditional_on_airline_time)
+dim(flights_conditional_on_airline_time)# the total number of flights is 5819079
+```
+#2.3.b
+```{r}
+flights_depart_delay_more_than_15=flights[flights$DEPARTURE_DELAY>15,]
+dim(flights_depart_delay_more_than_15)# the total number of flights is 1018558
+```
+#2.3.c
+```{r}
+flights_depart_delay_less_than_15=flights[flights$DEPARTURE_DELAY<15,]
+dim(flights_depart_delay_less_than_15)# the total number of flights is 4675372
+```
+#2.3.d
+```{r}
+delay_vary_by_day=flights%>%group_by(YEAR,MONTH,DAY)%>%summarize(mean_delay=mean(DEPARTURE_DELAY,na.rm=T),sd_delay=sd(DEPARTURE_DELAY,na.rm = T))%>%mutate(distribution:=mean_delay/sum(mean_delay))
+delay_vary_by_firm=flights%>%group_by(AIRLINE)%>%summarize(mean_delay=mean(DEPARTURE_DELAY,na.rm=T),sd_delay=sd(DEPARTURE_DELAY,na.rm = T))%>%mutate(distribution:=mean_delay/sum(mean_delay))
+```
+#2.4.a
+```{r}
+entire_year_market_share=flights%>%group_by(AIRLINE)%>%summarize(count=n())
+```
+#2.4.b
+```{r}
+month_by_month_market_share=flights%>%group_by(AIRLINE,MONTH)%>%summarize(count=n())%>%mutate(distribution:=count/sum(count))
+month_by_month_market_share#the market share distribution across airlines vary by month
+```
+#problem 3
+```{r}
+rm(list=ls()); gc()
+library(data.table)
+library("stringr")
+e0 = list()
+rm(list = ls()[ls()!='e0'])
+dta_at_imdb = fread(file="C:/Users/jiaji/Desktop/data_movies_at_imdb.csv", header = TRUE, stringsAsFactors = FALSE)
+e0$dta_at_imdb        = dta_at_imdb
+dta_at_imdb  = data.table::copy(e0$dta_at_imdb)
+```
+#fix actors
+```{r}
+b            = strsplit(dta_at_imdb$Actors,',')
+temp         = cbind(table(unlist(b)))
+for (k  in 1:length(b)) {
+  b[[k]]             = stringr::str_trim(b[[k]],side = "both")
+  if(b[[k]]=="N/A"){b[[k]]=NA}
+}
+
+
+c = list()
+for (k  in 1:length(b)) {
+  c[[k]]              = as.data.table(cbind(dta_at_imdb$imdbID[k],
+                                            cbind(b[[k]])))
+}
+
+dta_at_imdb$Actors      = sapply(b, length)
+movies_actors           = rbindlist(c)
+colnames(movies_actors) = c('imdbID','Actor') 
+e0$dta_at_imdb_actors   = movies_actors
+head(e0$dta_at_imdb_actors)
+```
+#fix awards
+```{r}
+table_award=dta_at_imdb[,c("Awards")]
+table_award=as.data.frame.table(as.data.frame(table_award))
+```
+#fix bookoffice
+```{r}
+for( i in 1:16578){
+       if((dta_at_imdb[,"BoxOffice"][i]=="N/A")==TRUE){
+             dta_at_imdb[,"BoxOffice"][i]=0
+       }}
+for( i in 1:16578){
+  if((dta_at_imdb[,"BoxOffice"][i]=="")==TRUE){
+      dta_at_imdb[,"BoxOffice"][i]=0
+  }}
+dta_at_imdb$BoxOffice=str_replace_all(dta_at_imdb$BoxOffice,fixed("$"),"")
+dta_at_imdb$BoxOffice=str_replace_all(dta_at_imdb$BoxOffice,fixed(","),"")
+dta_at_imdb$BoxOffice=as.numeric(dta_at_imdb$BoxOffice)
+```
+#fix countries
+```{r}
+c=strsplit(dta_at_imdb$country,',')
+temp=cbind(table(unlist(c)))
+for(i in 1:length(c)){
+c[i]=stringr::str_trim(c[[i]],side="both")
+if(b[[k]]=="N/A"){b[[k]]=NA}
+}
+dta_at_imdb$Country      = sapply(c, length)
+movies_country=rbindlist(c)
+```
+#fix runtime
+```{r}
+dta_at_imdb[, Runtime   := NULL]
+```
+#problem 4
+```{r}
+p=sample(x=0,size = 99,replace = TRUE)
+p[1]=1
+p[2]=1/2
+for(i in 3:100){
+  p[i]=(1/i)*sum(p)
+}
+plot(p)#the probability is 0.5 no matter the number of passengers is 100,150 or 200.
+```
