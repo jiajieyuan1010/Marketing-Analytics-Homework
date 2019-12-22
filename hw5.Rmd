@@ -1,0 +1,200 @@
+
+
+```{r}
+library(data.table)
+library(stats)
+library(dplyr)
+library(lmtest)
+library(zoo)
+library(sandwich)
+install.packages("AER")
+library(survival)
+library(AER)
+getwd()
+setwd("C:/Users/jiaji/Downloads/")
+```
+
+#question5
+```{r}
+smoking <- read.csv('Smoking.csv',header = TRUE)
+head(smoking)
+length(smoking)
+dim(smoking)[1]
+```
+
+```{r}
+#a
+prob_smoking_all_worker=dim(smoking[smoking$smoker==1,])[1]/dim(smoking)[1]
+prob_smoking_bans=dim(smoking[smoking$smoker==1|smoking$smkban==1,])[1]/dim(smoking)[1]
+prob_smoking_not_bans=dim(smoking[smoking$smoker==1|smoking$smkban==0,])[1]/dim(smoking)[1]
+#b
+reg_11.1 <- lm(smoker ~ smkban, data = smoking)
+summary(reg_11.1)
+```
+#the difference is -0.078 with a standard error of 0.009.The resulting t-statistic is -8.66,so the coefficient is statistically significant.
+
+```{r}
+#c
+smoking=smoking%>%mutate(age2=age^2)
+reg_11.2 <- lm(smoker ~ smkban + female + age + age2+hsdrop+hsgrad+colsome+colgrad+black+hispanic,data = smoking)
+summary(reg_11.2)
+```
+#the difference is -0.047,smaller than the effect in b.Thus,b suffers from ommitted variables.We conclude that smoking may be correlated with 
+#the education/race/gender indicators or with age.For example,
+#workers with a college degree are more likely to work in an office with a smoking
+#ban than high-school dropouts, and college graduates are less likely to smoke than
+#high-school dropouts.
+
+```{r}
+#d
+coeftest(reg_11.2, vcov = vcovHC(reg_11.2, type = "HC1"))
+#The t-statistic is -5.27, so the coefficient is statistically significant at the 1% level.
+```
+```{r}
+#e
+coeftest(reg_11.2, vcov = vcovHC(reg_11.2, type = "HC1"))
+#The omitted education status is “Masters degree or higher.” Thus the coefficients show the
+#increase in probability relative to someone with a postgraduate degree.
+#the coefficient on Colgrad is 0.045, so the probability of smoking for a college
+#graduate is 0.045 (4.5%) higher than for someone with a postgraduate degree.
+#Similarly, the coefficient on HSdrop is 0.323, so the probability of smoking for a
+#college graduate is 0.323 (32.3%) higher than for someone with a postgraduate
+#degree. Because the coefficients are all positive and get smaller as educational
+#attainment increases, the probability of smoking falls as educational attainment
+#increases.
+```
+```{r}
+#f
+reg_11.3 <- glm(smoker ~ smkban + female + age + age2+hsdrop+hsgrad+colsome+colgrad+black+hispanic,data = smoking,family = binomial(link = "probit"))
+summary(reg_11.3)
+coeftest(reg_11.3, vcov = vcovHC(reg_11.3, type = "HC1"))
+#The t-statistic for the coefficient on smkban is -5.43, very similar to the value for the linear probability model. The F-statistic is
+#significant at the 1% level, as in the linear probability model.
+```
+```{r}
+#g
+reg_11.4 <- glm(smoker ~ smkban + female + age + age2 +hsdrop+hsgrad+colsome+colgrad+black+hispanic,data = smoking,family = binomial(link = "logit"))
+summary(reg_11.4)
+coeftest(reg_11.4, vcov = vcovHC(reg_11.4, type = "HC1"))
+#The t-statistic for the coefficient on smkban
+#is -5.29, very similar to the value for the linear probability and probit models. The Fstatistic
+#is significant at the 1% level, as in the linear probability model.
+```
+```{r}
+#h.i
+temp.data = data.frame(female=0,age2=20^2,age=20,hispanic=0,hsdrop=1,smkban=0,black=0,hsgrad=0,colsome=0,colgrad=0)
+logit.11.3.predict <- as.data.frame(predict(reg_11.3, newdata = temp.data, 
+                                            type = "response", se=TRUE))
+#h.ii
+temp.data = data.frame(female=1,age2=40^2,age=40,hispanic=0,hsdrop=0,smkban=0,black=1,hsgrad=0,colsome=0,colgrad=1)
+logit.11.4.predict <- as.data.frame(predict(reg_11.3, newdata = temp.data, 
+                                            type = "response", se=TRUE))
+#h.iii
+temp.data = data.frame(female=0,age2=20^2,age=20,hispanic=0,hsdrop=1,smkban=0,black=0,hsgrad=0,colsome=0,colgrad=0)
+logit.11.5.predict <- as.data.frame(predict(reg_11.2, newdata = temp.data, 
+                                            type = "response", se=TRUE))
+temp.data = data.frame(female=1,age2=40^2,age=40,hispanic=0,hsdrop=0,smkban=0,black=1,hsgrad=0,colsome=0,colgrad=1)
+logit.11.6.predict <- as.data.frame(predict(reg_11.2, newdata = temp.data, 
+                                            type = "response", se=TRUE))
+#h.iv
+#The linear probability model assumes that the marginal impact of workplace smoking
+#bans on the probability of an individual smoking is not dependent on the other
+#characteristics of the individual. On the other hand, the probit and logit models’ predicted
+#marginal impact of workplace smoking bans on the probability of smoking depends on
+#individual characteristics. Therefore, in the linear probability model, the marginal impact
+#of workplace smoking bans is the same for Mr. A and Mr. B, although their profiles
+#would suggest that Mr. A has a higher probability of smoking based on his
+#characteristics.
+```
+#question6
+```{r}
+#a.i
+movies <- read.csv('movies.csv',header = TRUE)
+head(movies)
+
+ln_reg=lm(log10(assaults)~year1 +year2 +year3 +year4 +year5 +year6 +year7 +year8 +year9 +year10 +month1 +month2 +month3 +month4 +month5 +month6 +month7 +month8
+          +month9 +month10 +month11 +month12,data =movies )
+summary(ln_reg)
+coeftest(ln_reg, vcov = vcovHC(ln_reg, type = "HC1"))
+#there is evidence of seasonality in assaults.There is tend to be more assaults in
+#some months like month5 and month9 than others.
+```
+```{r}
+#a.ii
+movies=movies%>%mutate(attend=attend_v + attend_m +
+                  attend_n)
+ln_reg.1=lm(attend~year1 +year2 +year3 +year4 +year5 +year6 +year7 +year8 +year9 +year10 +month1 +month2 +month3 +month4 +month5 +month6 +month7 +month8
+          +month9 +month10 +month11 +month12,data =movies )
+summary(ln_reg.1)
+coeftest(ln_reg, vcov = vcovHC(ln_reg.1, type = "HC1"))
+#There is evidence of seasonality in movie attendance.There is tend to be more attendance in
+#some months than others.
+```
+```{r}
+#b.i
+
+ln_reg.2=lm(log10(assaults)~attend_v + attend_m +
+            attend_n+year1 +year2 +year3 +year4 +year5 +year6 +year7 +year8 +year9 +year10 +month1 +month2 +month3 +month4 +month5 +month6 +month7 +month8
+          +month9 +month10 +month11 +month12+
+            h_chris+h_newyr +h_easter +h_july4 +h_mem +h_labor +w_maxa +w_maxb +w_maxc+w_mina +w_minb +w_minc +w_rain,data =movies )
+summary(ln_reg.2)
+coeftest(ln_reg.2, vcov = vcovHC(ln_reg.2, type = "HC1"))
+
+#Based on the regression, viewing a strongly violent movie
+#increase assaults.It is the estimated
+#effect statistically significant.
+```
+```{r}
+#b.ii
+#attendance at strongly violent movies affect assaults differently
+#than attendance at moderately violent movies.Differently
+#attendance at nonviolent,because the coefficients for all of these variables are different.
+
+#b.iii
+predict_change= ln_reg.2$coefficients[1]+ln_reg.2$coefficients[2]*6000000-ln_reg.2$coefficients[3]*2000000-ln_reg.2$coefficients[4]*1000000
+```
+```{r}
+#c
+reg15 = ivreg(log(assaults)~attend_v+attend_m+attend_n+year1+year2+year3+year4+year5+year6+year7+year8+year9+month1+month2+month3+month4+month5+month6+month7+month8+month9+month10+month11+h_chris+h_newyr+h_easter+h_july4+h_mem+h_labor+w_maxa+w_maxb+w_maxc+w_mina+w_minb+w_minc+w_rain+w_snow|year1+year2+year3+year4+year5+year6+year7+year8+year9+month1+month2+month3+month4+month5+month6+month7+month8+month9+month10+month11+h_chris+h_newyr+h_easter+h_july4+h_mem+h_labor+w_maxa+w_maxb+w_maxc+w_mina+w_minb+w_minc+w_rain+w_snow+pr_attend_v+pr_attend_m+pr_attend_n, data = movies)
+summary(reg15)
+coeftest(reg15, vcov = vcovHC(reg15, type = "HC1"))
+#Based on the regression, viewing a strongly violent movie
+#increase assaults.It is the estimated
+#effect statistically significant.The t-value for attend_v is -3.590,F-statistic is less than 1.96,The F-statistic is
+#significant at the 1% level.
+#attendance at strongly violent movies affect assaults is not so differently
+#than attendance at moderately violent movies,
+#because the coefficients for all of these variables are different but the differences are not too much
+predict_change= reg15$coefficients[1]+reg15$coefficients[2]*6000000-reg15$coefficients[3]*2000000-reg15$coefficients[4]*1000000
+#the predicted effect on assaults will decrease 12975.24
+```
+```{r}
+#d
+reg15.1 = ivreg(log(assaults)~attend_v+attend_m+attend_n+year1+year2+year3+year4+year5+year6+year7+year8+year9+month1+month2+month3+month4+month5+month6+month7+month8+month9+month10+month11+h_chris+h_newyr+h_easter+h_july4+h_mem+h_labor+w_maxa+w_maxb+w_maxc+w_mina+w_minb+w_minc+w_rain+w_snow|year1+year2+year3+year4+year5+year6+year7+year8+year9+month1+month2+month3+month4+month5+month6+month7+month8+month9+month10+month11+h_chris+h_newyr+h_easter+h_july4+h_mem+h_labor+w_maxa+w_maxb+w_maxc+w_mina+w_minb+w_minc+w_rain+w_snow+attend_v_f+attend_m_f+attend_n_f+attend_v_b+attend_m_b+attend_n_b+pr_attend_v+pr_attend_m+pr_attend_n, data = movies)
+summary(reg15.1)
+coeftest(reg15, vcov = vcovHC(reg15.1, type = "HC1"))
+coeftest(reg15, vcov = vcovHC(reg15, type = "HC1"))
+#Based on the regression, viewing a strongly violent movie
+#increase assaults.It is the estimated
+#effect statistically significant.The t-value for attend_v is -3.590,F-statistic is less than 1.96,The F-statistic is
+#significant at the 1% level.
+#attendance at strongly violent movies affect assaults is not so differently
+#than attendance at moderately violent movies,
+#because the coefficients for all of these variables are different but the differences are not too much
+predict_change= reg15$coefficients[1]+reg15$coefficients[2]*6000000-reg15$coefficients[3]*2000000-reg15$coefficients[4]*1000000
+#the predicted effect on assaults will decrease 12975.24
+```
+```{r}
+#e
+## get J-statistics
+reg16 =lm(residuals(reg15)~year1+year2+year3+year4+year5+year6+year7+year8+year9+month1+month2+month3+month4+month5+month6+month7+month8+month9+month10+month11+h_chris+h_newyr+h_easter+h_july4+h_mem+h_labor+w_maxa+w_maxb+w_maxc+w_mina+w_minb+w_minc+w_rain+w_snow+attend_v_f+attend_m_f+attend_n_f+attend_v_b+attend_m_b+attend_n_b+pr_attend_v+pr_attend_m+pr_attend_n, data=movies)
+summary(reg16)
+
+linearHypothesis(reg16, c("attend_v_f", "attend_m_f","attend_n_f", "attend_v_b","attend_m_b","attend_n_b", "pr_attend_v", "pr_attend_m", "pr_attend_n"),test="Chisq")
+#Because p-value>0.05,thus the instruments are valid.
+```
+
+#f
+#I conclude that violent movies are affected by many factors, such as weather, assults, season and so on.The coefficients of 
+#different months differ a lot. Thus,the time effect of violent movies cannot be ignored.As the increase in the violent movies,
+#the increase in short-term violent behaviour.
